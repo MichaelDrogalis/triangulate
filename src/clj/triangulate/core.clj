@@ -10,15 +10,57 @@
 
 (defn polyline []
   (let [body (:body (client/get "http://maps.googleapis.com/maps/api/directions/json"
-                                {:query-params {:origin "240 East Morton Street, Old Forge"
-                                                :destination "245 East Morton Street, Old Forge"
+                                {:query-params {:origin "Intersection of Main Street and Stephenson Street, Duryea, PA"
+                                                :destination "Intersection of Main Street and Phoenix Street, Duryea, PA"
                                                 :sensor false}}))]
     (-> (parse-string body true) :routes first :overview_polyline :points)))
 
 (defn decode-polyline [poly]
   (map (fn [x] {:lat (.latitude x) :long (.longitude x)}) (PolylineDecoder/decodePoly poly)))
 
-(pprint (decode-polyline (polyline)))
+(defn haversine [a b]
+  (let [lat1 (:lat a)
+        lat2 (:lat b)
+        lon1 (:long a)
+        lon2 (:long b)
+        R 6372.8
+        dlat (Math/toRadians (- lat2 lat1))
+        dlon (Math/toRadians (- lon2 lon1))
+        lat1 (Math/toRadians lat1)
+        lat2 (Math/toRadians lat2)
+        a (+ (* (Math/sin (/ dlat 2)) (Math/sin (/ dlat 2)))
+             (* (Math/sin (/ dlon 2)) (Math/sin (/ dlon 2))
+                (Math/cos lat1) (Math/cos lat2)))]
+    (* 1000 (* R 2 (Math/asin (Math/sqrt a))))))
+
+(def coordinates (reverse (decode-polyline (polyline))))
+
+(def meters-away 200)
+
+(def pairs (partition 2 1 coordinates))
+
+(def segments (map (fn [[a b]] (haversine a b)) pairs))
+
+(defn take-segments
+  ([segments distance] (take-segments segments distance 0 0))
+  ([[head & tail] distance k n]
+     (if (>= k distance)
+       n
+       (recur tail distance (+ k head) (inc n)))))
+
+(def back-segment (take-segments segments meters-away))
+
+(def front-segment (dec back-segment))
+
+(def back-distance (reduce + (take back-segment segments)))
+
+(def front-distance (reduce + (take front-segment segments)))
+
+(def back-coordinate (nth coordinates back-segment))
+
+(def front-coordinate (nth coordinates front-segment))
+
+(def distance-to-front-segment (- back-distance meters-away))
 
 (defroutes routes
   (POST "/rush-hour/api/triangulate/edn" {:keys [body]}
