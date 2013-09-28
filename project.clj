@@ -3,6 +3,8 @@
   :url "https://github.com/MichaelDrogalis/triangulate"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :source-paths ["src/clj"]
+  :java-source-paths ["src/java"]
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [ring/ring-jetty-adapter "1.2.0"]
                  [compojure "1.1.5"]
