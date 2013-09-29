@@ -20,8 +20,8 @@
 
 (defn haversine [a b]
   (let [lat1 (:lat a)
-        lat2 (:lat b)
         lon1 (:long a)
+        lat2 (:lat b)
         lon2 (:long b)
         R 6372800
         dlat (Math/toRadians (- lat2 lat1))
@@ -33,32 +33,21 @@
                 (Math/cos lat1) (Math/cos lat2)))]
     (* R 2 (Math/asin (Math/sqrt a)))))
 
-(defn bearing [a b]
+(defn interpolate-coordinates [a b c d]
   (let [lat1 (:lat a)
-        lat2 (:lat b)
         lon1 (:long a)
+        lat2 (:lat b)
         lon2 (:long b)
-        rlat-1 (Math/toRadians lat1)
-        rlat-2 (Math/toRadians lat2)
-        diff (Math/toRadians (- lon2 lon1))
-        y (* (Math/sin diff) (Math/cos rlat-2))
-        x (- (* (Math/cos rlat-1) (Math/sin rlat-2))
-             (* (Math/sin rlat-1) (Math/cos rlat-2) (Math/cos diff)))]
-    (mod (Math/toDegrees (+ (Math/atan2 y x) 360)) 360)))
-
-(defn interpolate-coordinates [a d bearing]
-  (let [lat-1 (:lat a)
-        long-1 (:long a)
-        r 6372800
-        lat-2 (Math/asin (+ (* (Math/sin lat-1)
-                               (Math/cos (/ d r)))
-                            (* (Math/cos lat-1)
-                               (Math/sin (/ d r))
-                               (Math/cos bearing))))
-        long-2 (+ long-1
-                  (Math/atan2 (* (Math/sin bearing) (Math/sin (/ d r)) (Math/cos lat-1))
-                              (- (Math/cos (/ d r)) (* (Math/sin lat-1) (Math/sin lat-2)))))]
-    {:lat lat-2 :long long-2}))
+        lat-diff (- lat2 lat1)
+        lon-diff (- lon2 lon1)
+        theta (Math/atan (/ lon-diff lat-diff))
+        x1 (* (Math/cos theta) d)
+        y1 (* (Math/sin theta) d)
+        x2 (* (Math/cos theta) c)
+        y2 (* (Math/sin theta) c)
+        x-ratio (* (/ x1 x2) lat-diff)
+        y-ratio (* (/ y1 y2) lon-diff)]
+    {:lat (+ lat1 x-ratio) :long (+ lon1 y-ratio)}))
 
 (defn take-segments
   ([segments distance] (take-segments segments distance 0 0))
@@ -87,13 +76,12 @@
 
 (def front-coordinate (nth coordinates front-segment))
 
-(def vehicle-bearing (bearing front-coordinate back-coordinate))
-
 (def distance-to-front-segment (- back-distance meters-away))
 
-;(pprint coordinates)
+(def target-to-front-segment (- meters-away front-distance))
 
-(interpolate-coordinates front-coordinate distance-to-front-segment vehicle-bearing)
+;;(pprint coordinates)
+
 
 (defroutes routes
   (POST "/rush-hour/api/triangulate/edn" {:keys [body]}
