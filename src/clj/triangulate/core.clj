@@ -8,10 +8,10 @@
   (:import [polyline PolylineDecoder]
            [polyline Location]))
 
-(defn polyline []
+(defn polyline [src dst]
   (let [body (:body (client/get "http://maps.googleapis.com/maps/api/directions/json"
-                                {:query-params {:origin "Intersection of Main Street and Stephenson Street, Duryea, PA"
-                                                :destination "Intersection of Main Street and Phoenix Street, Duryea, PA"
+                                {:query-params {:origin src
+                                                :destination dst
                                                 :sensor false}}))]
     (-> (parse-string body true) :routes first :overview_polyline :points)))
 
@@ -23,7 +23,7 @@
         lon1 (:long a)
         lat2 (:lat b)
         lon2 (:long b)
-        R 6372800
+        radius-of-earth 6372800
         dlat (Math/toRadians (- lat2 lat1))
         dlon (Math/toRadians (- lon2 lon1))
         lat1 (Math/toRadians lat1)
@@ -31,7 +31,7 @@
         a (+ (* (Math/sin (/ dlat 2)) (Math/sin (/ dlat 2)))
              (* (Math/sin (/ dlon 2)) (Math/sin (/ dlon 2))
                 (Math/cos lat1) (Math/cos lat2)))]
-    (* R 2 (Math/asin (Math/sqrt a)))))
+    (* radius-of-earth 2 (Math/asin (Math/sqrt a)))))
 
 (defn interpolate-coordinates [a b c d]
   (let [lat1 (:lat a)
@@ -56,37 +56,22 @@
        n
        (recur tail distance (+ k head) (inc n)))))
 
-(def coordinates (reverse (decode-polyline (polyline))))
-
-(def meters-away 200)
-
-(def pairs (partition 2 1 coordinates))
-
-(def segments (map (fn [[a b]] (haversine a b)) pairs))
-
-(def back-segment (take-segments segments meters-away))
-
-(def front-segment (dec back-segment))
-
-(def back-distance (reduce + (take back-segment segments)))
-
-(def front-distance (reduce + (take front-segment segments)))
-
-(def back-coordinate (nth coordinates back-segment))
-
-(def front-coordinate (nth coordinates front-segment))
-
-(def distance-to-front-segment (- back-distance meters-away))
-
-(def target-to-front-segment (- meters-away front-distance))
-
-;;(pprint coordinates)
-
+(defn target-coordinates [src dst meters-away]
+  (let [coordinates (reverse (decode-polyline (polyline src dst)))
+        pairs (partition 2 1 coordinates)
+        segments (map (fn [[a b]] (haversine a b)) pairs)
+        back-segment (take-segments segments meters-away)
+        front-segment (dec back-segment)
+        front-distance (reduce + (take front-segment segments))
+        back-coordinate (nth coordinates back-segment)   
+        front-coordinate (nth coordinates front-segment)
+        front-to-target (- meters-away front-distance)]
+    (interpolate-coordinates front-coordinate back-coordinate front-to-target meters-away)))
 
 (defroutes routes
   (POST "/rush-hour/api/triangulate/edn" {:keys [body]}
         (let [{:keys [src dst]} (read-string (slurp body))]
-          (pr-str {}))))
+          (pr-str {:coordinates (interpolate-coordinates)}))))
 
 (def app (wrap-params #'routes))
 
