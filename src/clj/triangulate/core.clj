@@ -23,7 +23,7 @@
         lat2 (:lat b)
         lon1 (:long a)
         lon2 (:long b)
-        R 6372.8
+        R 6372800
         dlat (Math/toRadians (- lat2 lat1))
         dlon (Math/toRadians (- lon2 lon1))
         lat1 (Math/toRadians lat1)
@@ -31,7 +31,41 @@
         a (+ (* (Math/sin (/ dlat 2)) (Math/sin (/ dlat 2)))
              (* (Math/sin (/ dlon 2)) (Math/sin (/ dlon 2))
                 (Math/cos lat1) (Math/cos lat2)))]
-    (* 1000 (* R 2 (Math/asin (Math/sqrt a))))))
+    (* R 2 (Math/asin (Math/sqrt a)))))
+
+(defn bearing [a b]
+  (let [lat1 (:lat a)
+        lat2 (:lat b)
+        lon1 (:long a)
+        lon2 (:long b)
+        rlat-1 (Math/toRadians lat1)
+        rlat-2 (Math/toRadians lat2)
+        diff (Math/toRadians (- lon2 lon1))
+        y (* (Math/sin diff) (Math/cos rlat-2))
+        x (- (* (Math/cos rlat-1) (Math/sin rlat-2))
+             (* (Math/sin rlat-1) (Math/cos rlat-2) (Math/cos diff)))]
+    (mod (Math/toDegrees (+ (Math/atan2 y x) 360)) 360)))
+
+(defn interpolate-coordinates [a d bearing]
+  (let [lat-1 (:lat a)
+        long-1 (:long a)
+        r 6372800
+        lat-2 (Math/asin (+ (* (Math/sin lat-1)
+                               (Math/cos (/ d r)))
+                            (* (Math/cos lat-1)
+                               (Math/sin (/ d r))
+                               (Math/cos bearing))))
+        long-2 (+ long-1
+                  (Math/atan2 (* (Math/sin bearing) (Math/sin (/ d r)) (Math/cos lat-1))
+                              (- (Math/cos (/ d r)) (* (Math/sin lat-1) (Math/sin lat-2)))))]
+    {:lat lat-2 :long long-2}))
+
+(defn take-segments
+  ([segments distance] (take-segments segments distance 0 0))
+  ([[head & tail] distance k n]
+     (if (>= k distance)
+       n
+       (recur tail distance (+ k head) (inc n)))))
 
 (def coordinates (reverse (decode-polyline (polyline))))
 
@@ -40,13 +74,6 @@
 (def pairs (partition 2 1 coordinates))
 
 (def segments (map (fn [[a b]] (haversine a b)) pairs))
-
-(defn take-segments
-  ([segments distance] (take-segments segments distance 0 0))
-  ([[head & tail] distance k n]
-     (if (>= k distance)
-       n
-       (recur tail distance (+ k head) (inc n)))))
 
 (def back-segment (take-segments segments meters-away))
 
@@ -60,7 +87,13 @@
 
 (def front-coordinate (nth coordinates front-segment))
 
+(def vehicle-bearing (bearing back-coordinate front-coordinate))
+
 (def distance-to-front-segment (- back-distance meters-away))
+
+;(pprint coordinates)
+
+(interpolate-coordinates front-coordinate distance-to-front-segment vehicle-bearing)
 
 (defroutes routes
   (POST "/rush-hour/api/triangulate/edn" {:keys [body]}
