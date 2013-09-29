@@ -87,7 +87,7 @@
 
 (def front-coordinate (nth coordinates front-segment))
 
-(def vehicle-bearing (bearing back-coordinate front-coordinate))
+(def vehicle-bearing (bearing front-coordinate back-coordinate))
 
 (def distance-to-front-segment (- back-distance meters-away))
 
