@@ -9,5 +9,6 @@
                  [ring/ring-jetty-adapter "1.2.0"]
                  [compojure "1.1.5"]
                  [clj-http "0.7.7"]
-                 [cheshire "5.2.0"]])
+                 [cheshire "5.2.0"]]
+  :main triangulate.core)
 

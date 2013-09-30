@@ -84,5 +84,6 @@
 
 (def app (wrap-params #'routes))
 
-(defonce jetty (run-jetty #'app {:port 9092 :join? false}))
+(defn -main [& args]
+  (run-jetty #'app {:port 9092 :join? true}))
 
