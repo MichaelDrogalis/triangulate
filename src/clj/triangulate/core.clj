@@ -4,15 +4,21 @@
             [ring.middleware.params :refer [wrap-params]]
             [clj-http.client :as client]
             [cheshire.core :refer [parse-string]]
-            [triangulate.memcached])
+            [triangulate.memcached :as m])
   (:import [polyline PolylineDecoder]
            [polyline Location]))
 
-(defn polyline [src dst]
+(defn polyline-from-google [src dst]
   (let [query-params {:origin src :destination dst :sensor false}
         resp (client/get "http://maps.googleapis.com/maps/api/directions/json"
                          {:query-params query-params})]
     (-> resp :body (parse-string true) :routes first :overview_polyline :points)))
+
+(defn polyline [src dst]
+  (or (m/cached-polyline src dst)
+      (let [result (polyline-from-google src dst)]
+        (m/cache-polyline src dst result)
+        result)))
 
 (defn decode-polyline [poly]
   (map (fn [x] {:lat (.latitude x) :long (.longitude x)})
