@@ -6,6 +6,7 @@
   :source-paths ["src/clj"]
   :java-source-paths ["src/java"]
   :dependencies [[org.clojure/clojure "1.5.1"]
+                 [clojurewerkz/spyglass "1.0.0"]
                  [ring/ring-jetty-adapter "1.2.0"]
                  [compojure "1.1.5"]
                  [clj-http "0.7.7"]

@@ -4,19 +4,19 @@
             [ring.middleware.params :refer [wrap-params]]
             [clj-http.client :as client]
             [cheshire.core :refer [parse-string]]
-            [clojure.pprint :refer [pprint]])
+            [triangulate.memcached])
   (:import [polyline PolylineDecoder]
            [polyline Location]))
 
 (defn polyline [src dst]
-  (let [body (:body (client/get "http://maps.googleapis.com/maps/api/directions/json"
-                                {:query-params {:origin src
-                                                :destination dst
-                                                :sensor false}}))]
-    (-> (parse-string body true) :routes first :overview_polyline :points)))
+  (let [query-params {:origin src :destination dst :sensor false}
+        resp (client/get "http://maps.googleapis.com/maps/api/directions/json"
+                         {:query-params query-params})]
+    (-> resp :body (parse-string true) :routes first :overview_polyline :points)))
 
 (defn decode-polyline [poly]
-  (map (fn [x] {:lat (.latitude x) :long (.longitude x)}) (PolylineDecoder/decodePoly poly)))
+  (map (fn [x] {:lat (.latitude x) :long (.longitude x)})
+       (PolylineDecoder/decodePoly poly)))
 
 (defn haversine [a b]
   (let [lat1 (:lat a)
@@ -52,9 +52,8 @@
 (defn take-segments
   ([segments distance] (take-segments segments distance 0 0))
   ([[head & tail] distance k n]
-     (if (>= k distance)
-       n
-       (recur tail distance (+ k head) (inc n)))))
+     (if (>= k distance) n
+         (recur tail distance (+ k head) (inc n)))))
 
 (defn format-intx [intx extender]
   (str "Intersection of "
