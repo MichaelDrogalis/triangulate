@@ -3,10 +3,16 @@
 
 (def twenty-four-hours (* 60 60 24))
 
+(def key-mapping (atom {}))
+
 (def conn (c/text-connection "127.0.0.1:11211"))
 
 (defn serialize-coordinates [src dst]
-  (pr-str {:src src :dst dst}))
+  (let [pair {:src src :dst dst}]
+    (str (or (get @key-mapping pair)
+             (let [mkey (java.util.UUID/randomUUID)]
+               (swap! key-mapping assoc pair mkey)
+               mkey)))))
 
 (defn cache-polyline [src dst polyline]
   (c/set conn (serialize-coordinates src dst) twenty-four-hours polyline))

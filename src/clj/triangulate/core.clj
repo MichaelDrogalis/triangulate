@@ -90,5 +90,5 @@
 (def app (wrap-params #'routes))
 
 (defn -main [& args]
-  (run-jetty #'app {:port 9092 :join? true}))
+  (run-jetty #'app {:port 9092 :join? false}))
 
