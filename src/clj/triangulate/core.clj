@@ -73,14 +73,16 @@
         pairs (partition 2 1 coordinates)
         segments (map (fn [[a b]] (haversine a b)) pairs)
         back-segment (take-segments segments gap)
-        front-segment (dec back-segment)
+        front-segment (max (dec back-segment) 0)
         back-distance (reduce + (take back-segment segments)) 
         front-distance (reduce + (take front-segment segments))
         back-coordinate (nth coordinates back-segment)   
         front-coordinate (nth coordinates front-segment)
         front-to-back (- back-distance front-distance)
         front-to-target (- gap front-distance)]
-    (interpolate-coordinates front-coordinate back-coordinate front-to-back front-to-target)))
+    (if (zero? back-segment)
+      back-coordinate
+      (interpolate-coordinates front-coordinate back-coordinate front-to-back front-to-target))))
 
 (defroutes routes
   (POST "/rush-hour/api/triangulate/edn" {:keys [body]}
