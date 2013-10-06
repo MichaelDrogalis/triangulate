@@ -5,7 +5,7 @@
 
 (def key-mapping (atom {}))
 
-(def conn (c/text-connection "127.0.0.1:11211"))
+(def conn (c/text-connection "rush-hour.bsfnjw.cfg.usw2.cache.amazonaws.com:11211"))
 
 (defn serialize-coordinates [src dst]
   (let [pair {:src src :dst dst}]
