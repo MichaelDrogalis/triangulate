@@ -5,7 +5,9 @@
 
 (def key-mapping (atom {}))
 
-(def conn (c/text-connection "rush-hour-cache.bsfnjw.0001.usw2.cache.amazonaws.com:11211"))
+(def config (read-string (slurp (clojure.java.io/resource "config.edn"))))
+
+(def conn (c/text-connection (:memcached config)))
 
 (defn serialize-coordinates [src dst]
   (let [pair {:src src :dst dst}]

@@ -11,5 +11,7 @@
                  [compojure "1.1.5"]
                  [clj-http "0.7.7"]
                  [cheshire "5.2.0"]]
+  :profiles {:dev {:resource-paths ["resources/dev"]}
+             :prod {:resource-paths ["resources/prod"]}}
   :main triangulate.core)
 
