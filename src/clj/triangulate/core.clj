@@ -8,6 +8,12 @@
   (:import [polyline PolylineDecoder]
            [polyline Location]))
 
+(def offset
+  "The distance between two intersections uses points
+   directly in the middle of each intersection. We want
+   a little distance to where cars actually stop."
+  10)
+
 (defn polyline-from-google [src dst]
   (let [query-params {:origin src :destination dst :sensor false}
         resp (client/get "http://maps.googleapis.com/maps/api/directions/json"
@@ -67,7 +73,8 @@
        "," extender))
 
 (defn target-coordinates [src dst gap extender]
-  (let [formatted-src (format-intx src extender)
+  (let [gap (+ gap offset)
+        formatted-src (format-intx src extender)
         formatted-dst (format-intx dst extender)
         coordinates (reverse (decode-polyline (polyline formatted-src formatted-dst)))
         pairs (partition 2 1 coordinates)
